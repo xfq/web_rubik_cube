@@ -1,5 +1,5 @@
 /* eslint-env browser */
-/* eslint no-console: off, strict: off*/
+/* eslint no-console: off, strict: off, no-param-reassign: off*/
 /* global THREE, Stats*/
 
 'use strict';
@@ -17,35 +17,92 @@ function getCSSValue(element, property) {
   return (parseInt(valueStr, 10));
 }
 
-function addKeydownEventsForWall() {
+function addKeydownEventsFor(_obj) {
   document.addEventListener('keydown', (event) => {
     const keyName = event.key || event.keyIdentifier;
     // console.log(keyName);
     if (keyName === 'ArrowLeft' || keyName === 'Left') {
       event.preventDefault();
-      currentWall.position.x -= 0.2;
+      _obj.position.x -= 0.2;
     }
     if (keyName === 'ArrowRight' || keyName === 'Right') {
       event.preventDefault();
-      currentWall.position.x += 0.2;
+      _obj.position.x += 0.2;
     }
     if (keyName === 'ArrowUp' || keyName === 'Up') {
       event.preventDefault();
-      currentWall.position.y += 0.2;
+      _obj.position.y += 0.2;
     }
     if (keyName === 'ArrowDown' || keyName === 'Down') {
       event.preventDefault();
-      currentWall.position.y -= 0.2;
+      _obj.position.y -= 0.2;
     }
     if (keyName === '[' || keyName === 'U+005B') {
       event.preventDefault();
-      currentWall.position.z -= 0.2;
+      _obj.position.z -= 0.2;
     }
     if (keyName === ']' || keyName === 'U+005D') {
       event.preventDefault();
-      currentWall.position.z += 0.2;
+      _obj.position.z += 0.2;
+    }
+    if (keyName === 'x') {
+      event.preventDefault();
+      _obj.rotation.x += Math.PI / 180;
+    }
+    if (keyName === 'y') {
+      event.preventDefault();
+      _obj.rotation.y += Math.PI / 180;
+    }
+    if (keyName === 'z') {
+      event.preventDefault();
+      _obj.rotation.z += Math.PI / 180;
     }
   }, false);
+}
+
+function faces(faceCode) {
+  let color = 'rgb(0, 0, 0)';
+  switch (faceCode) {
+    case 'U':
+      color = 'rgb(255, 255, 255)';
+      break;
+    case 'F':
+      color = 'rgb(0, 157, 84)';
+      break;
+    case 'R':
+      color = 'rgb(220, 66, 47)';
+      break;
+    case 'D':
+      color = 'rgb(253, 204, 9)';
+      break;
+    case 'L':
+      color = 'rgb(255, 108, 0)';
+      break;
+    case 'B':
+      color = 'rgb(61, 129, 246)';
+      break;
+    default:
+      break;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  ctx.fillRect(0, 0, 512, 512);
+  ctx.rect(71, 71, 370, 370);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 100;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.fill();
+  // Add Text Label
+  ctx.fillStyle = 'black';
+  ctx.font = 'Italic 300px Times New Roman';
+  ctx.fillText(faceCode, 160, 364);
+  return canvas;
 }
 
 /* Stats Function */
@@ -125,26 +182,7 @@ function initLight() {
   scene.add(lights[2]);
 }
 
-function initObject() {
-  mesh = new THREE.Object3D();
-  const geometryCube = new THREE.CubeGeometry(2, 2, 2, 2, 2, 2);
-  const materialCube = new THREE.MeshPhongMaterial({
-    color: 0x156289,
-    emissive: 0x072534,
-    // wireframe: true,
-  });
-
-  for (let x = 1; x <= 5; x += 2) {
-    for (let y = 1; y <= 5; y += 2) {
-      for (let z = 1; z <= 5; z += 2) {
-        const cube = new THREE.Mesh(geometryCube, materialCube.clone());
-        cube.position.set(x, y, z);
-        mesh.add(cube);
-        allCubes.push(cube);
-      }
-    }
-  }
-
+function addWalls() {
   if (!hasWall) {
     const geometryWall = new THREE.CubeGeometry(6, 1, 6, 0, 0, 0);
     const materialWall = new THREE.MeshPhongMaterial({
@@ -193,7 +231,63 @@ function initObject() {
     scene.add(downWall);
     hasWall = true;
   }
+}
 
+function initObject() {
+  mesh = new THREE.Object3D();
+  const geometryCube = new THREE.CubeGeometry(2, 2, 2, 2, 2, 2);
+  const materialCube = new THREE.MeshPhongMaterial({
+    color: 0x156289,
+    emissive: 0x072534,
+    // wireframe: true,
+  });
+
+  for (let x = 1; x <= 5; x += 2) {
+    for (let y = 1; y <= 5; y += 2) {
+      for (let z = 1; z <= 5; z += 2) {
+        const cube = new THREE.Mesh(geometryCube, materialCube.clone());
+        cube.position.set(x, y, z);
+        mesh.add(cube);
+        allCubes.push(cube);
+      }
+    }
+  }
+  const materials = [];
+  const myFaces = [];
+  myFaces.push(faces('U'));
+  myFaces.push(faces('F'));
+  myFaces.push(faces('R'));
+  myFaces.push(faces('D'));
+  myFaces.push(faces('L'));
+  myFaces.push(faces('B'));
+
+  for (let k = 0; k < 6; k += 1) {
+    var texture = new THREE.Texture(myFaces[k]);
+    texture.needsUpdate = true;
+    materials.push(new THREE.MeshBasicMaterial({
+      map: texture,
+    }));
+  }
+
+  const cubemat = new THREE.MultiMaterial(materials);
+  allCubes[2].material = cubemat;
+  // for (var k = 0; k < 6; k++) {
+  //   var texture = new THREE.Texture(myFaces[k]);
+  //   texture.needsUpdate = true;
+  //   materials.push(new THREE.MeshLambertMaterial({
+  //     map: texture
+  //   }));
+  // }
+  // var cubemat = new THREE.MeshFaceMaterial(materials);
+
+
+
+
+
+
+
+
+  addWalls();
   scene.add(mesh);
 }
 
@@ -202,7 +296,6 @@ function markUp(_obj) {
 }
 
 function detection(dectWall) {
-  // 谁碰到我，谁变白
   const originPoint = dectWall.position.clone();
   for (let i = 0; i < dectWall.geometry.vertices.length; i += 1) {
     const localVertex = dectWall.geometry.vertices[i].clone();
@@ -275,5 +368,4 @@ function startThree() {
 }
 
 startThree();
-
-
+addKeydownEventsFor(allCubes[2]);
