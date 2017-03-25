@@ -17,6 +17,37 @@ function getCSSValue(element, property) {
   return (parseInt(valueStr, 10));
 }
 
+function addKeydownEventsForWall() {
+  document.addEventListener('keydown', (event) => {
+    const keyName = event.key || event.keyIdentifier;
+    // console.log(keyName);
+    if (keyName === 'ArrowLeft' || keyName === 'Left') {
+      event.preventDefault();
+      currentWall.position.x -= 0.2;
+    }
+    if (keyName === 'ArrowRight' || keyName === 'Right') {
+      event.preventDefault();
+      currentWall.position.x += 0.2;
+    }
+    if (keyName === 'ArrowUp' || keyName === 'Up') {
+      event.preventDefault();
+      currentWall.position.y += 0.2;
+    }
+    if (keyName === 'ArrowDown' || keyName === 'Down') {
+      event.preventDefault();
+      currentWall.position.y -= 0.2;
+    }
+    if (keyName === '[' || keyName === 'U+005B') {
+      event.preventDefault();
+      currentWall.position.z -= 0.2;
+    }
+    if (keyName === ']' || keyName === 'U+005D') {
+      event.preventDefault();
+      currentWall.position.z += 0.2;
+    }
+  }, false);
+}
+
 /* Stats Function */
 const stats = new Stats();
 (() => {
@@ -36,12 +67,11 @@ let leftWall;
 let backWall;
 let rightWall;
 let downWall;
+let currentWall;
 
-let isdetection = false;
+let hasWall = false;
 
-const leftArray = [];
-const topArray = [];
-const rightArray = [];
+const currentArray = [];
 const allCubes = [];
 
 const speed = 1;
@@ -115,45 +145,54 @@ function initObject() {
     }
   }
 
-  // const materialTemp = new THREE.MeshPhongMaterial({
-  //   color: 0x156289,
-  // });
-  // mesh.children[24].material = materialTemp;
+  if (!hasWall) {
+    const geometryWall = new THREE.CubeGeometry(6, 1, 6, 0, 0, 0);
+    const materialWall = new THREE.MeshPhongMaterial({
+      color: colors[0],
+      emissive: 0x072534,
+      // wireframe: true,
+      side: THREE.DoubleSide,
+      visible: false,
+    });
+    topWall = new THREE.Mesh(geometryWall, materialWall);
+    topWall.position.set(3, 6, 3);
+    topWall.rotation.x = Math.PI;
+    topWall.name = 'topWall';
 
-  // 碰撞检测面
-  const geometryWall = new THREE.CubeGeometry(6, 1, 6, 1, 1, 1);
-  const materialWall = new THREE.MeshPhongMaterial({
-    color: colors[0],
-    emissive: 0x072534,
-    wireframe: true,
-    side: THREE.DoubleSide,
-    visible: true,
-  });
+    frontWall = new THREE.Mesh(geometryWall, materialWall);
+    frontWall.position.set(3, 3, 6);
+    frontWall.rotation.x = Math.PI * 0.5;
+    frontWall.name = 'frontWall';
 
-  // topWall.position.set(3, 6, 3);
-  // topWall.rotation.x = Math.PI;
+    leftWall = new THREE.Mesh(geometryWall, materialWall);
+    leftWall.position.set(0, 3, 3);
+    leftWall.rotation.z = Math.PI * 0.5;
+    leftWall.name = 'leftWall';
 
-  // frontWall.position.set(3, 3, 6);
-  // frontWall.rotation.x = Math.PI * 0.5;
+    backWall = new THREE.Mesh(geometryWall, materialWall);
+    backWall.position.set(3, 3, 0);
+    backWall.rotation.x = Math.PI * 0.5;
+    backWall.name = 'backWall';
 
-  // leftWall.position.set(0, 3, 3);
-  // leftWall.rotation.z = Math.PI * 0.5;
+    rightWall = new THREE.Mesh(geometryWall, materialWall);
+    rightWall.position.set(6, 3, 3);
+    rightWall.rotation.z = Math.PI * 0.5;
+    rightWall.name = 'rightWall';
 
-  // backWall.position.set(3, 3, 0);
-  // backWall.rotation.x = Math.PI * 0.5;
+    downWall = new THREE.Mesh(geometryWall, materialWall);
+    downWall.position.set(3, 0, 3);
+    downWall.rotation.x = Math.PI;
+    downWall.name = 'downWall';
 
-  // rightWall.position.set(6, 3, 3);
-  // rightWall.rotation.z = Math.PI * 0.5;
-
-  // downWall.position.set(3, 0, 3);
-  // downWall.rotation.x = Math.PI;
-
-  topWall = new THREE.Mesh(geometryWall, materialWall);
-  topWall.position.set(3, 6, 3);
-  topWall.rotation.x = Math.PI;
-  topWall.name = 'topWall';
-  topWall.rotation.x = Math.PI;
-  scene.add(topWall);
+    // 需要将碰撞墙加在 scene 中，加入 mesh 会特别诡异
+    scene.add(topWall);
+    scene.add(frontWall);
+    scene.add(leftWall);
+    scene.add(backWall);
+    scene.add(rightWall);
+    scene.add(downWall);
+    hasWall = true;
+  }
 
   scene.add(mesh);
 }
@@ -172,20 +211,52 @@ function detection(dectWall) {
     const ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
     const collisionResults = ray.intersectObjects(allCubes, false);
     if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+      console.log(collisionResults.length);
       for (let j = 0; j < collisionResults.length; j += 1) {
+        // TODO: 加入到不重复的数组 currentArray
         markUp(collisionResults[j].object);
       }
     }
-    // crash = false;
+  }
+}
+
+function command(str) {
+  switch (str) {
+    case 'T':
+      currentWall = topWall;
+      break;
+    case 'F':
+      currentWall = frontWall;
+      break;
+    case 'L':
+      currentWall = leftWall;
+      break;
+    case 'B':
+      currentWall = backWall;
+      break;
+    case 'R':
+      currentWall = rightWall;
+      break;
+    case 'D':
+      currentWall = downWall;
+      break;
+    default:
+      break;
+  }
+  detection(currentWall);
+}
+
+function temp() {
+  // console.log(currentArray.length);
+  // console.log(currentArray);
+  for (let _obj of currentArray) {
+    markUp(_obj);
   }
 }
 
 function render() {
   stats.begin();
   requestAnimationFrame(render);
-  if (isdetection) {
-    detection(topWall);
-  }
   stats.end();
   // mesh.rotation.x += Math.PI / 180 * speed;
   // mesh.rotation.y += Math.PI / 180 * speed;
@@ -205,38 +276,4 @@ function startThree() {
 
 startThree();
 
-let wall = topWall;
-document.addEventListener('keydown', (event) => {
-  const keyName = event.key || event.keyIdentifier;
-  // console.log(keyName);
-  if (keyName === 'ArrowLeft' || keyName === 'Left') {
-    event.preventDefault();
-    wall.position.x -= 0.2;
-    // allCubes[1].position.x -= 0.2;
-  }
-  if (keyName === 'ArrowRight' || keyName === 'Right') {
-    event.preventDefault();
-    wall.position.x += 0.2;
-    // allCubes[1].position.x += 0.2;
-  }
-  if (keyName === 'ArrowUp' || keyName === 'Up') {
-    event.preventDefault();
-    wall.position.y += 0.2;
-  }
-  if (keyName === 'ArrowDown' || keyName === 'Down') {
-    event.preventDefault();
-    wall.position.y -= 0.2;
-  }
-  if (keyName === '[') {
-    event.preventDefault();
-    wall.position.z -= 0.2;
-  }
-  if (keyName === ']') {
-    event.preventDefault();
-    wall.position.z += 0.2;
-  }
-  if (keyName === 'd') {
-    event.preventDefault();
-    isdetection = !isdetection;
-  }
-}, false);
+
